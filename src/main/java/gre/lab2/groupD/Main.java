@@ -16,7 +16,7 @@ public final class Main {
     //  - Documentation soignée comprenant :
     //    - la javadoc, avec auteurs et description des implémentations ;
     //    - des commentaires sur les différentes parties de vos algorithmes.
-    var reseau = WeightedDigraphReader.fromFile(RESEAU_2); //Changer le fichier pour tester les autres réseaux
+    var reseau = WeightedDigraphReader.fromFile(RESEAU_4); //Changer le fichier pour tester les autres réseaux
     var algo = new BellmanFordYensAlgorithm();
 
     var result = algo.compute(reseau, 0);

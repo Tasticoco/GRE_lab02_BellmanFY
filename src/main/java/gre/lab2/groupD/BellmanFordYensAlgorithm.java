@@ -8,84 +8,133 @@ import java.util.*;
 
 public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm {
 
+  // Représentation en int de la sentinel (on part donc du principe que les sommets sont numérotés strictement positivement > 0)
+  private static final int SENTINEL = -1;
+
+  /**
+   * Applique l'algorithme de Bellman-Ford-Yens
+   *
+   * @param graph Le graphe sur lequel on veut appliquer BFY.
+   * @param from Le sommet depuis lequel on applique BFY.
+   * @return Un résultat de l'algorithme prenant soit la forme d'un cycle négatif, soit une arborescence de plus court chemin.
+   */
   @Override
   public BFYResult compute(WeightedDigraph graph, int from) {
-    int nbVertices = graph.getNVertices();
-    int[] lambda = new int[nbVertices]; //Longueurs des plus courts chemins depuis "from" jusqu'a s, s étant l'un des éléments de ce tableau
-    int[] p = new int[nbVertices]; //Prédécesseurs immédiats dans ces chemins.
-    boolean aCircuitAbsorbant = false;
-    boolean[] sommetsEnFile = new boolean[nbVertices]; //Utilisé pour garder quel sommet est déjà dans la queue
-    List<Integer> negativeCycle = null;
+    // Récupère le nombre de sommets dans le graphe sur lequel on veut appliquer BFY
+    int nbSommets = graph.getNVertices();
+    // Tableau des longueurs des plus courts chemins menant à chaque sommet depuis le sommet "from" (l'index du tableau représente le sommet).
+    int[] distance = new int[nbSommets];
+    // Tableau des prédécesseurs directs de chaque sommet dans le chemin trouvé le plus court.
+    int[] predecesseurs = new int[nbSommets];
+    // Tableau de boolean qui représente quel sommet est dans la file (true s'il est actuellement dans la file).
+    boolean[] sommetsEnFile = new boolean[nbSommets];
+    // La fonction ne retourne pas la meme chose selon le résultat de notre Bellman-Ford-Yens
+    BFYResult resultat = null;
 
-    for(int j = 0; j < nbVertices; j++){
-      lambda[j] = Integer.MAX_VALUE;
-      p[j] = -1; //-1 étant NULL (L'assistant voulait pas que je garde Integer pour ça :P)
+    //Initialisation des tableaux
+    for (int j = 0; j < nbSommets; j++) {
+      // Les distances sont initialisées à la valeur maximale, car nous cherchons des améliorations sur le chemin le plus court.
+      distance[j] = Integer.MAX_VALUE;
+      predecesseurs[j] = -1; // -1 indique que le sommet n'a pas de prédécesseur.
     }
 
-    lambda[from] = 0;
+    distance[from] = 0;
+    // Compteur pour vérifier si on a un circuit absorbant.
     int k = 0;
 
-    Queue<Integer> fileSommet = new LinkedList<>();
+    // File des sommets à traiter.
+    Queue<Integer> fileSommet = new ArrayDeque<>();
     fileSommet.add(from);
     sommetsEnFile[from] = true;
-    fileSommet.add(null); //Sentinelle
+    // On rajoute la sentinelle à la file.
+    fileSommet.add(SENTINEL);
 
-    while(!fileSommet.isEmpty()){
-      Integer curr = fileSommet.remove();
-      if(curr == null) {
-        if(!fileSommet.isEmpty()) {
+    //Algorithme de Bellman-Ford-Yens
+    while (!fileSommet.isEmpty()) {
+      int actuel = fileSommet.remove();
+      if (actuel == SENTINEL) {
+        if (!fileSommet.isEmpty()) {
           k += 1;
           if (k == graph.getNVertices()) {
-            aCircuitAbsorbant = true;
-            for(int i = 0; i < k + 1; i++){
-                curr = fileSommet.remove();
-            }
-            negativeCycle = findNegativeCycle(curr, p, graph);
-            break; //R contient un circuit absorbant accessible depuis "from"
-          } else fileSommet.add(null);
+            // Un cycle négatif a été trouvé, donc on le calcule.
+            resultat = trouverCycleNegatif(trouverSommetCycleNegatif(nbSommets, fileSommet, predecesseurs), predecesseurs, graph);
+            break;
+          } else fileSommet.add(SENTINEL);
         }
       } else {
-          sommetsEnFile[curr] = false;
+        sommetsEnFile[actuel] = false;
 
-          for(WeightedDigraph.Edge edge : graph.getOutgoingEdges(curr)){
-            //public record Edge(int from, int to, int weight)
-            int succ = edge.to();
-            if(lambda[succ] > lambda[curr] + edge.weight()){ //Amélioration -> mise à jour (pas sur de mettre j.weight() lol)
-              lambda[succ] = lambda[curr] + edge.weight();
-              p[succ] = curr;
-              if(!sommetsEnFile[succ]){ // Vérifier contenance pour j dans Queue
-                fileSommet.add(succ);
-              }
+        for (WeightedDigraph.Edge edge : graph.getOutgoingEdges(actuel)) {
+          int succ = edge.to();
+          // Si amélioration, on met à jour.
+          if (distance[succ] > distance[actuel] + edge.weight()) {
+            distance[succ] = distance[actuel] + edge.weight();
+            predecesseurs[succ] = actuel;
+            // Vérifie si le successeur est dans la file.
+            if (!sommetsEnFile[succ]) {
+              fileSommet.add(succ);
+              sommetsEnFile[succ] = true;
             }
           }
+        }
       }
-      }
-
-    BFYResult res; // La fonction ne retourne pas la meme chose selon le résultat de notre Bellman-Ford-Yens
-    if(aCircuitAbsorbant){
-      res = new BFYResult.NegativeCycle(negativeCycle, negativeCycle.size());
-    } else {
-      res = new BFYResult.ShortestPathTree(lambda,p);
+    }
+    // Si le résultat n'a pas été changé, il n'y a pas de circuit absorbant et on peut donc créer un résultat
+    if (resultat == null) {
+      resultat = new BFYResult.ShortestPathTree(distance, predecesseurs);
     }
 
-    //TROUVER CYCLE NÉGATIF -> 5.4 dans le cours
-    return res;
+    return resultat;
   }
 
-  private List<Integer> findNegativeCycle(int start, int[] p, WeightedDigraph graph) {
+  /**
+   * Méthode pour trouver le cycle négatif du graphe.
+   *
+   * @param debut Sommet sur lequel on commence la détection, il est nécessaire que ce sommet fasse partie du cycle négatif.
+   * @param p Tableau des prédecesseurs de chaques sommets.
+   * @param graph Le graphe sur lequel on travaille.
+   * @return Le cycle négatif ainsi que son poids.
+   */
+  private BFYResult.NegativeCycle trouverCycleNegatif(int debut, int[] p, WeightedDigraph graph) {
     List<Integer> cycle = new LinkedList<>();
-    int curr = start;
-    Set<Integer> visited = new HashSet<>();
+    int longueur = 0;
+    int actuel = debut;
 
-    while (!visited.contains(curr)) {
-      visited.add(curr);
-      cycle.add(curr);
-      curr = p[curr];
+    //Itère sur tous les prédécesseurs du sommet de départ pour trouver tous les sommets composant ce cycle.
+    do {
+      // On ajoute le sommet depuis la tête de la liste, car on itère dans le sens inverse des arcs.
+      cycle.addFirst(actuel);
+      // Récupère les arcs qui sortent du prédécesseur du sommet actuel.
+      for (WeightedDigraph.Edge arc : graph.getOutgoingEdges(p[actuel])) {
+        // Si l'arc du prédécesseur mène au sommet actuel, on rajoute la longueur de l'arc à celle du cycle.
+        if (arc.to() == actuel) {
+          longueur += arc.weight();
+        }
+      }
+      actuel = p[actuel];
+    } while (actuel != debut);
+
+    return new BFYResult.NegativeCycle(cycle, longueur);
+  }
+
+
+  /**
+   *
+   * @param nbSommets
+   * @param fileSommets
+   * @param predecesseurs
+   * @return
+   */
+  private int trouverSommetCycleNegatif(int nbSommets, Queue<Integer> fileSommets, int[] predecesseurs) {
+    boolean[] sommetsVisites = new boolean[nbSommets];
+
+    int remontada = fileSommets.remove();
+    while (!sommetsVisites[remontada]) {
+      sommetsVisites[remontada] = true;
+      remontada = predecesseurs[remontada];
     }
 
-    int startIndex = cycle.indexOf(curr);
-    return cycle.subList(startIndex, cycle.size());
+    return remontada;
   }
 }
-
 
