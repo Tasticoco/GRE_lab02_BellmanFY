@@ -20,6 +20,8 @@ import java.io.IOException;
  * @see BellmanFordYensAlgorithm
  */
 public final class Main {
+  static final int SOURCE_BFY = 0;
+
   static final String RESEAU_1 = "data/reseau1.txt";
   static final String RESEAU_2 = "data/reseau2.txt";
   static final String RESEAU_3 = "data/reseau3.txt";
@@ -29,7 +31,7 @@ public final class Main {
     var algo = new BellmanFordYensAlgorithm();
 
     //On applique l'algorithme de Bellman-Ford-Yens sur le réseau depuis le sommet 0
-    var result = algo.compute(reseau, 0);
+    var result = algo.compute(reseau, SOURCE_BFY);
 
     //Affichage du résultat
     if(result.isNegativeCycle()){
