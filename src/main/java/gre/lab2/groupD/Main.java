@@ -27,7 +27,7 @@ public final class Main {
   static final String RESEAU_3 = "data/reseau3.txt";
   static final String RESEAU_4 = "data/reseau4.txt";
   public static void main(String[] args) throws IOException {
-    var reseau = WeightedDigraphReader.fromFile(RESEAU_3); //Changer le fichier pour tester les autres réseaux
+    var reseau = WeightedDigraphReader.fromFile(RESEAU_1); //Changer le fichier pour tester les autres réseaux
     var algo = new BellmanFordYensAlgorithm();
 
     //On applique l'algorithme de Bellman-Ford-Yens sur le réseau depuis le sommet 0
@@ -38,7 +38,7 @@ public final class Main {
       System.out.println("Circuit absorbant trouvé: " + result.getNegativeCycle());
     } else {
       System.out.println("Aucun circuit absorbant trouvé dans ce réseau.");
-      if(reseau.getNVertices() < 25) {
+      if(reseau.getNVertices() <= 25) {
         System.out.println("Arborescence de plus court chemin trouvé : " + result.getShortestPathTree());
       }
     }
