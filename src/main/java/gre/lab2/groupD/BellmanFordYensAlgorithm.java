@@ -6,10 +6,20 @@ import gre.lab2.graph.WeightedDigraph;
 
 import java.util.*;
 
+/**
+ * Cette classe implémente l'algorithme de Bellman-Ford-Yens pour trouver les plus courts chemins
+ * dans un graphe pondéré et détecter les cycles négatifs.
+ *
+ * @author Junod Arthur
+ * @author Häffner Edwin
+ * @see WeightedDigraph
+ * @see BFYResult
+ */
 public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm {
 
-  // Représentation en int de la sentinel (on part donc du principe que les sommets sont numérotés strictement positivement > 0)
+  // Représentation en int de la sentinelle (on part donc du principe que les sommets sont numérotés strictement positivement >= 0)
   private static final int SENTINEL = -1;
+  private static final int SANS_PREDECESSEUR = -1;
 
   /**
    * Applique l'algorithme de Bellman-Ford-Yens
@@ -35,7 +45,7 @@ public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm
     for (int j = 0; j < nbSommets; j++) {
       // Les distances sont initialisées à la valeur maximale, car nous cherchons des améliorations sur le chemin le plus court.
       distance[j] = Integer.MAX_VALUE;
-      predecesseurs[j] = -1; // -1 indique que le sommet n'a pas de prédécesseur.
+      predecesseurs[j] = SANS_PREDECESSEUR; // Au début, aucun sommet n'a de prédécesseur.
     }
 
     distance[from] = 0;
@@ -64,11 +74,12 @@ public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm
       } else {
         sommetsEnFile[actuel] = false;
 
-        for (WeightedDigraph.Edge edge : graph.getOutgoingEdges(actuel)) {
-          int succ = edge.to();
+        // Itère sur les arcs sortants du sommet actuel.
+        for (WeightedDigraph.Edge arc : graph.getOutgoingEdges(actuel)) {
+          int succ = arc.to();
           // Si amélioration, on met à jour.
-          if (distance[succ] > distance[actuel] + edge.weight()) {
-            distance[succ] = distance[actuel] + edge.weight();
+          if (distance[succ] > distance[actuel] + arc.weight()) {
+            distance[succ] = distance[actuel] + arc.weight();
             predecesseurs[succ] = actuel;
             // Vérifie si le successeur est dans la file.
             if (!sommetsEnFile[succ]) {
@@ -88,12 +99,14 @@ public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm
   }
 
   /**
-   * Méthode pour trouver le cycle négatif du graphe.
+   * Méthode pour trouver le cycle négatif du graphe. À seulement utiliser si un cycle négatif a été détecté grâce à
+   * l'algorithme de Bellman-Ford-Yens.
    *
+   * @throws IllegalStateException Si le sommet de départ n'est pas dans un cycle négatif.
    * @param debut Sommet sur lequel on commence la détection, il est nécessaire que ce sommet fasse partie du cycle négatif.
-   * @param p Tableau des prédecesseurs de chaques sommets.
+   * @param p Tableau des prédécesseurs de chaque sommet.
    * @param graph Le graphe sur lequel on travaille.
-   * @return Le cycle négatif ainsi que son poids.
+   * @return Le cycle négatif ainsi que sa longueur.
    */
   private BFYResult.NegativeCycle trouverCycleNegatif(int debut, int[] p, WeightedDigraph graph) {
     List<Integer> cycle = new LinkedList<>();
@@ -109,32 +122,41 @@ public final class BellmanFordYensAlgorithm implements IBellmanFordYensAlgorithm
         // Si l'arc du prédécesseur mène au sommet actuel, on rajoute la longueur de l'arc à celle du cycle.
         if (arc.to() == actuel) {
           longueur += arc.weight();
+          break; // Sortir de la boucle une fois l'arc trouvé
         }
       }
+      if(p[actuel] == SANS_PREDECESSEUR)
+        throw new IllegalStateException("Vous essayez de trouver un cycle négatif à partir d'un sommet qui n'est pas dans un cycle négatif...");
+
       actuel = p[actuel];
-    } while (actuel != debut);
+
+    } while (actuel != debut); // On s'arrête une fois qu'on a fait le tour du cycle.
 
     return new BFYResult.NegativeCycle(cycle, longueur);
   }
 
 
   /**
+   * Méthode pour trouver un sommet appartenant au cycle négatif. À seulement utiliser si un cycle négatif a été détecté
+   * grâce à l'algorithme de Bellman-Ford-Yens.
    *
-   * @param nbSommets
-   * @param fileSommets
-   * @param predecesseurs
-   * @return
+   * @param nbSommets Nombre total de sommets dans le graphe.
+   * @param fileSommets File contenant les sommets à traiter.
+   * @param predecesseurs Tableau des prédécesseurs de chaque sommet.
+   * @return Un sommet appartenant au cycle négatif.
    */
   private int trouverSommetCycleNegatif(int nbSommets, Queue<Integer> fileSommets, int[] predecesseurs) {
     boolean[] sommetsVisites = new boolean[nbSommets];
 
-    int remontada = fileSommets.remove();
-    while (!sommetsVisites[remontada]) {
-      sommetsVisites[remontada] = true;
-      remontada = predecesseurs[remontada];
+    int sommetDansCycle = fileSommets.remove();
+
+    // Remonte les prédécesseurs à partir du sommet courant jusqu'à trouver un sommet déjà visité (appartenant au cycle négatif).
+    while (!sommetsVisites[sommetDansCycle]) {
+      sommetsVisites[sommetDansCycle] = true;
+      sommetDansCycle = predecesseurs[sommetDansCycle];
     }
 
-    return remontada;
+    return sommetDansCycle;
   }
 }
 

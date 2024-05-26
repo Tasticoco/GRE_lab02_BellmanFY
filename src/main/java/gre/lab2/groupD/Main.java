@@ -4,6 +4,21 @@ import gre.lab2.graph.WeightedDigraphReader;
 
 import java.io.IOException;
 
+/**
+ * LABORATOIRE 2 : ALGORITHME DE BELLMAN-FORD-YENS ET RECONSTRUCTION D'UN CIRCUIT ABSORBANT
+ * Groupe D
+ * Ce programme permet de d'effectuer l'algorithme de Bellman-Ford avec l'amélioration de Yens sur des réseaux
+ * donnés en format texte.
+ * Ce programme à deux sorties possibles. Soit on arrive à trouver une arborescence de plus courts chemins depuis l'origine,
+ * ici l'origine sera toujours le sommet 0, soit on trouve un circuit absorbant.
+ * Pour le premier cas, on affiche l'arborescence trouvée en imprimant dans le terminal la distance entre le sommet 0 et
+ * chaque autre sommet. On affiche aussi une liste des prédecesseurs pour chaque sommet. Et pour le second cas,
+ * on affiche le circuit absorbant en indiquant quels sommets sont impliqués et sa longueur.
+ *
+ * @author Junod Arthur
+ * @author Häffner Edwin
+ *
+ */
 public final class Main {
   static final String RESEAU_1 = "data/reseau1.txt";
   static final String RESEAU_2 = "data/reseau2.txt";
@@ -19,28 +34,14 @@ public final class Main {
     var reseau = WeightedDigraphReader.fromFile(RESEAU_4); //Changer le fichier pour tester les autres réseaux
     var algo = new BellmanFordYensAlgorithm();
 
+    //On applique l'algorithme de Bellman-Ford-Yens sur le réseau depuis le sommet 0
     var result = algo.compute(reseau, 0);
 
+    //Affichage du résultat
     if(result.isNegativeCycle()){
       System.out.println("Circuit absorbant trouvé: " + result.getNegativeCycle());
     } else {
       System.out.println("Arborescence de plus court chemin trouvé : " + result.getShortestPathTree());
     }
-
-    //Reseau 1 :
-    // Arborescence de plus court chemin trouvé :
-    // ShortestPathTree{distances=[0, 2, 12, 4, 7, 2, 2, 4, 0, 1, 3, 0, -1, 4, 3], predecessors=[-1, 9, 1, 11, 13, 12, 3, 3, 0, 12, 1, 5, 0, 5, 3]}
-
-    //Reseau 2 :
-    // Circuit absorbant trouvé:
-    // NegativeCycle{vertices=[14, 10], length=2}
-
-    //Reseau 3 :
-    // Arborescence de plus court chemin trouvé : long...
-
-    //Reseau 4 :
-    // Circuit absorbant trouvé:
-    // NegativeCycle{vertices=[809, 973, 582, 662, 842, 642, 594, 982, 603, 996, 682, 904, 722, 683, 593, 954, 673, 962, 641, 859], length=20}
-
   }
 }
